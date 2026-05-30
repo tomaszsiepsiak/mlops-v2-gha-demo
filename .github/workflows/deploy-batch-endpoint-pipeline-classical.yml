@@ -1,44 +1,55 @@
 name: deploy-batch-endpoint-pipeline
 
-on: 
+on:
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   get-config:
-      uses: Azure/mlops-templates/.github/workflows/read-yaml.yml@main
+      uses: Azure/mlops-templates/.github/workflows/read-yaml.yml@Dec2025patch
       with:
         file_name: config-infra-prod.yml
   create-compute:
       needs: get-config
-      uses: Azure/mlops-templates/.github/workflows/create-compute.yml@main
+      uses: Azure/mlops-templates/.github/workflows/create-compute.yml@Dec2025patch
       with:
         cluster_name: batch-cluster
         size: STANDARD_DS3_V2
         min_instances: 0
-        max_instances: 5
+        max_instances: 1
         resource_group: ${{ needs.get-config.outputs.resource_group }}
-        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}     
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
       secrets:
-          creds: ${{secrets.AZURE_CREDENTIALS}}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   create-endpoint:
       needs: [get-config,create-compute]
-      uses: Azure/mlops-templates/.github/workflows/create-endpoint.yml@main
+      uses: Azure/mlops-templates/.github/workflows/create-endpoint.yml@Dec2025patch
       with:
         resource_group: ${{ needs.get-config.outputs.resource_group }}
-        workspace_name: ${{ needs.get-config.outputs.aml_workspace }} 
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
         endpoint_file: mlops/azureml/deploy/batch/batch-endpoint.yml
-        endpoint_name:  ${{ format('taxi-gha-{0}', needs.get-config.outputs.bep) }} 
+        endpoint_name:  ${{ format('taxi-gha-{0}', needs.get-config.outputs.bep) }}
         endpoint_type: batch
       secrets:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   create-deployment:
-      uses: Azure/mlops-templates/.github/workflows/create-deployment.yml@main
+      uses: Azure/mlops-templates/.github/workflows/create-deployment.yml@Dec2025patch
       needs: [get-config,create-endpoint]
       with:
         resource_group: ${{ needs.get-config.outputs.resource_group }}
-        workspace_name: ${{ needs.get-config.outputs.aml_workspace }} 
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
         endpoint_file: mlops/azureml/deploy/batch/batch-deployment.yml
-        endpoint_name: ${{ format('taxi-gha-{0}', needs.get-config.outputs.bep) }} 
+        endpoint_name: ${{ format('taxi-gha-{0}', needs.get-config.outputs.bep) }}
         endpoint_type: batch
         deployment_name: eptestdeploy
       secrets:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

@@ -1,42 +1,53 @@
 name: deploy-online-endpoint-pipeline
 
-on: 
+on:
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   get-config:
-      uses: Azure/mlops-templates/.github/workflows/read-yaml.yml@main
+      uses: Azure/mlops-templates/.github/workflows/read-yaml.yml@Dec2025patch
       with:
         file_name: config-infra-prod.yml
   create-endpoint:
       needs: get-config
-      uses: Azure/mlops-templates/.github/workflows/create-endpoint.yml@main
+      uses: Azure/mlops-templates/.github/workflows/create-endpoint.yml@Dec2025patch
       with:
         resource_group: ${{ needs.get-config.outputs.resource_group }}
-        workspace_name: ${{ needs.get-config.outputs.aml_workspace }} 
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
         endpoint_file: mlops/azureml/deploy/online/online-endpoint.yml
         endpoint_name: ${{ format('taxi-gha-{0}', needs.get-config.outputs.oep) }}
         endpoint_type: online
       secrets:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   create-deployment:
-      uses: Azure/mlops-templates/.github/workflows/create-deployment.yml@main
+      uses: Azure/mlops-templates/.github/workflows/create-deployment.yml@Dec2025patch
       needs: [get-config,create-endpoint]
       with:
         resource_group: ${{ needs.get-config.outputs.resource_group }}
-        workspace_name: ${{ needs.get-config.outputs.aml_workspace }} 
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
         endpoint_file: mlops/azureml/deploy/online/online-deployment.yml
         endpoint_name: ${{ format('taxi-gha-{0}', needs.get-config.outputs.oep) }}
         endpoint_type: online
         deployment_name: taxi-online-dp
       secrets:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   allocate-traffic:
-      uses: Azure/mlops-templates/.github/workflows/allocate-traffic.yml@main
+      uses: Azure/mlops-templates/.github/workflows/allocate-traffic.yml@Dec2025patch
       needs: [get-config,create-deployment]
       with:
         resource_group: ${{ needs.get-config.outputs.resource_group }}
-        workspace_name: ${{ needs.get-config.outputs.aml_workspace }} 
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
         traffic_allocation: taxi-online-dp=100
         endpoint_name: ${{ format('taxi-gha-{0}', needs.get-config.outputs.oep) }}
       secrets:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
